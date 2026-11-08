@@ -8,49 +8,94 @@ and shared, so no per-request allocation cost.
 from __future__ import annotations
 
 import random
+import re
 from dataclasses import dataclass
 
 # (User-Agent, weight, family, major_version)
+#
+# Coverage: Chrome / Edge / Firefox / Safari / Opera across Windows, macOS,
+# Linux, Android and iOS. Weights roughly follow desktop browser market
+# share; the first 12 entries (the level-2 pool) already span all five
+# families. Versions should be refreshed periodically; see
+# docs/07-stealth-levels.md.
 UA_TEMPLATES: tuple[tuple[str, int, str, int], ...] = (
+    # Chromium: Google Chrome
     (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
         26, "chrome", 131,
     ),
     (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-        16, "chrome", 130,
+        14, "chrome", 130,
     ),
     (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        12, "chrome", 131,
+        10, "chrome", 131,
+    ),
+    # Gecko: Mozilla Firefox
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+        8, "firefox", 133,
+    ),
+    # Chromium: Microsoft Edge
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+        8, "edge", 131,
+    ),
+    # WebKit: desktop Safari
+    (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15",
+        7, "safari", 18,
     ),
     (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-        8, "chrome", 130,
+        6, "chrome", 130,
     ),
     (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
-        10, "firefox", 133,
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 Edg/130.0.0.0",
+        5, "edge", 130,
     ),
     (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Gecko/20100101 Firefox/132.0",
         5, "firefox", 132,
     ),
     (
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15",
-        8, "safari", 18,
-    ),
-    (
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edg/131.0.0.0 Safari/537.36",
-        9, "edge", 131,
-    ),
-    (
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36",
         4, "chrome", 129,
     ),
+    # Chromium: Opera (OPR token carries the Opera version)
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 OPR/116.0.0.0",
+        4, "opera", 116,
+    ),
+    # Mobile
     (
         "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1",
-        2, "safari", 18,
+        3, "safari", 18,
+    ),
+    (
+        "Mozilla/5.0 (X11; Linux x86_64; rv:133.0) Gecko/20100101 Firefox/133.0",
+        3, "firefox", 133,
+    ),
+    (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0",
+        3, "edge", 131,
+    ),
+    (
+        "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36",
+        3, "chrome", 131,
+    ),
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0",
+        3, "firefox", 132,
+    ),
+    (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 OPR/116.0.0.0",
+        2, "opera", 116,
+    ),
+    (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        2, "chrome", 128,
     ),
 )
 
@@ -97,6 +142,22 @@ def random_profile(pool_size: int | None = None, *, rng: random.Random | None = 
     return BrowserProfile(ua, family, major, locale, accept_language)
 
 
+_CHROMIUM_BRANDS = {"chrome": "Google Chrome", "edge": "Microsoft Edge", "opera": "Opera"}
+
+
+def _platform_hint(user_agent: str) -> tuple[str, str]:
+    """Derive (platform, mobile) from the UA so hints never contradict it."""
+    if "Android" in user_agent:
+        return "Android", "?1"
+    if "iPhone" in user_agent or "iPad" in user_agent:
+        return "iOS", "?1"
+    if "Windows" in user_agent:
+        return "Windows", "?0"
+    if "Macintosh" in user_agent:
+        return "macOS", "?0"
+    return "Linux", "?0"
+
+
 def consistent_headers(profile: BrowserProfile) -> dict[str, str]:
     """Build headers that agree with the chosen UA (no contradictory hints)."""
     headers = {
@@ -109,20 +170,23 @@ def consistent_headers(profile: BrowserProfile) -> dict[str, str]:
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
     }
-    if profile.family in {"chrome", "edge"}:
+    brand = _CHROMIUM_BRANDS.get(profile.family)
+    if brand is not None:
+        # Edge/Opera UAs embed the Chromium version ("Chrome/131..."); the
+        # Chromium brand must use that, not the browser's own version.
+        chromium = re.search(r"Chrome/(\d+)", profile.user_agent)
+        chromium_major = int(chromium.group(1)) if chromium else profile.major
+        platform, mobile = _platform_hint(profile.user_agent)
         headers["Sec-Fetch-Dest"] = "document"
         headers["Sec-Fetch-Mode"] = "navigate"
         headers["Sec-Fetch-Site"] = "none"
         headers["Sec-Fetch-User"] = "?1"
-        brand = "Microsoft Edge" if profile.family == "edge" else "Google Chrome"
         headers["Sec-CH-UA"] = (
-            f'"{brand}";v="{profile.major}", "Chromium";v="{profile.major}", "Not_A Brand";v="24"'
+            f'"{brand}";v="{profile.major}", "Chromium";v="{chromium_major}", '
+            '"Not_A Brand";v="24"'
         )
-        headers["Sec-CH-UA-Mobile"] = "?0"
-        headers["Sec-CH-UA-Platform"] = '"Windows"'
-    elif profile.family == "firefox":
-        headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
-        headers["Upgrade-Insecure-Requests"] = "1"
+        headers["Sec-CH-UA-Mobile"] = mobile
+        headers["Sec-CH-UA-Platform"] = f'"{platform}"'
     return headers
 
 

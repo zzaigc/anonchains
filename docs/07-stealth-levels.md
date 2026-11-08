@@ -38,8 +38,8 @@
 
 `FingerprintEngine.build()` 每次请求生成 `RequestProfile(headers, delay_seconds, impersonate, user_agent)`：
 
-- `random_profile()` 从按真实浏览器版本分布加权的 UA 池中抽取一个**浏览器画像**（family / version / UA）；
-- `consistent_headers()` 保证 `User-Agent`、`Accept`、`Accept-Encoding`、`Sec-Fetch-*`、`Accept-Language` 等与该画像**一致**，避免「UA 是 Chrome、头是 curl」这类矛盾；
+- `random_profile()` 从按真实浏览器版本分布加权的 UA 池中抽取一个**浏览器画像**（family / version / UA）；UA 池覆盖 **Chrome / Edge / Firefox / Safari / Opera** 五个家族 × Windows、macOS、Linux、Android、iOS 平台共 18 条模板，权重近似真实市场份额（Chrome ≈ 65%），等级 2 的 12 条子池也已覆盖全部五个家族；
+- `consistent_headers()` 保证 `User-Agent`、`Accept`、`Accept-Encoding`、`Sec-Fetch-*`、`Accept-Language` 等与该画像**一致**：Chromium 家族（Chrome / Edge / Opera）会附带 `Sec-CH-UA*`，其中 `Sec-CH-UA-Platform` 与 `Sec-CH-UA-Mobile` **从 UA 反向推导**（Mac UA 配 `macOS`、Android UA 配 `?1`），Opera 的 Chromium 版本取自 UA 中的 `Chrome/<major>` 而非 Opera 自身版本；Firefox / Safari 不发送 client hints，避免「UA 是 Chrome、头是 curl」这类矛盾；
 - `shuffle_header_order=True` 时打乱头部顺序，但保留 `User-Agent` 在首位（部分站点会拒绝 UA 被埋在后面的请求）；
 - `synthetic_referer` 生成与画像一致的 Referer；`rotate_accept_language` 关闭时固定 `en-US,en;q=0.9`；
 - `delay_seconds` 从策略区间均匀采样，`pause()` 在请求前 `asyncio.sleep()`；

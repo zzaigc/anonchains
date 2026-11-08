@@ -8,7 +8,36 @@ from anonchains.stealth import (
     effective_concurrency,
     get_policy,
 )
-from anonchains.stealth.ua_pool import UA_TEMPLATES, random_profile
+from anonchains.stealth.ua_pool import BrowserProfile, UA_TEMPLATES, consistent_headers, random_profile
+
+
+def test_ua_pool_covers_major_browsers():
+    families = {t[2] for t in UA_TEMPLATES}
+    assert {"chrome", "edge", "firefox", "safari", "opera"} <= families
+    platforms: set[str] = set()
+    for ua, _w, _f, _m in UA_TEMPLATES:
+        for token in ("Windows", "Macintosh", "X11", "Android", "iPhone"):
+            if token in ua:
+                platforms.add(token)
+    assert {"Windows", "Macintosh", "X11"} <= platforms
+    # Level-2 pool (first 12, ordered by weight) already spans all families.
+    assert {t[2] for t in UA_TEMPLATES[:12]} >= {"chrome", "edge", "firefox", "safari", "opera"}
+
+
+def test_headers_agree_with_user_agent_platform():
+    for ua, _w, family, _major in UA_TEMPLATES:
+        browser = BrowserProfile(ua, family, _major, "en-US", "en-US,en;q=0.9")
+        headers = consistent_headers(browser)
+        if family in {"chrome", "edge", "opera"}:
+            platform = headers["Sec-CH-UA-Platform"].strip('"')
+            expected = ("Android" if "Android" in ua else
+                        "iOS" if "iPhone" in ua else
+                        "Windows" if "Windows" in ua else
+                        "macOS" if "Macintosh" in ua else "Linux")
+            assert platform == expected, ua
+            assert headers["Sec-CH-UA-Mobile"] == ("?1" if expected in {"Android", "iOS"} else "?0")
+        else:
+            assert "Sec-CH-UA" not in headers  # Safari/Firefox do not send client hints
 
 
 def test_all_levels_exist_and_are_ordered():
