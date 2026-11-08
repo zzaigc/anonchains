@@ -81,4 +81,4 @@ python -m pytest tests -q       # 离线单元测试
 
 ## 许可
 
-MIT。使用本项目即表示接受 `docs/14-compliance.md` 中的合规与使用边界。
+[MIT](LICENSE)。使用本项目即表示接受 `docs/14-compliance.md` 中的合规与使用边界。
