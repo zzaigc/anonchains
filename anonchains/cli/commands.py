@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+import sys
 import time
 from pathlib import Path
 from typing import Any, Callable, Coroutine, Sequence
@@ -327,6 +328,39 @@ async def a_chain_core_export(ctx: AppContext, ui: UI) -> None:
     ui.json(ctx.core_manager.dry_run(chain))
 
 
+async def a_chain_core_install(ctx: AppContext, ui: UI) -> None:
+    """Download sing-box via scripts/install_singbox.py (mirrors + resume)."""
+    import platform as _platform
+
+    script = Path(__file__).resolve().parents[2] / "scripts" / "install_singbox.py"
+    if not script.exists():
+        ui.error(f"未找到安装脚本：{script}")
+        return
+    ui.print("开始下载 sing-box 到 vendor/sing-box/（失败自动切换镜像，支持断点续传）...")
+    proc = await asyncio.create_subprocess_exec(sys.executable, str(script))
+    rc = await proc.wait()
+    if rc != 0:
+        ui.error(f"安装脚本退出码 {rc}；可稍后重试或手动下载后配置 core.sing_box_path")
+        return
+    ui.success("sing-box 安装完成")
+    if ctx.core_manager.binaries().get("sing-box") is None:
+        try:
+            import importlib.util
+
+            spec = importlib.util.spec_from_file_location("install_singbox", script)
+            assert spec is not None and spec.loader is not None
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            binary = "sing-box.exe" if _platform.system().lower() == "windows" else "sing-box"
+            rel = (
+                Path("vendor/sing-box") / f"{mod.detect_platform()}-{mod.detect_arch()}" / binary
+            ).as_posix()
+            ctx.set_config_value("core", "sing_box_path", rel)
+            ui.print(f"已写入配置：core.sing_box_path = {rel}（热更新生效）")
+        except Exception as exc:  # config write is best-effort
+            ui.warn(f"自动写入配置失败（{exc}），请手动执行 anonchains config-set core sing_box_path <路径>")
+
+
 # --- gateway actions ---------------------------------------------------
 
 async def a_gateway_status(ctx: AppContext, ui: UI) -> None:
@@ -517,6 +551,7 @@ ACTIONS: dict[str, Handler] = {
     "chain-core-start": a_chain_core_start,
     "chain-core-stop": a_chain_core_stop,
     "chain-core-export": a_chain_core_export,
+    "chain-core-install": a_chain_core_install,
     "gateway-status": a_gateway_status,
     "gateway-start": a_gateway_start,
     "gateway-stop": a_gateway_stop,
@@ -543,16 +578,33 @@ ACTIONS: dict[str, Handler] = {
 
 # --- menu loop ---------------------------------------------------------
 
+def _status_line(ctx: AppContext) -> str:
+    """Compact one-line summary rendered under the main menu title."""
+    try:
+        policy = get_policy(ctx.config.crawler.stealth_level)
+        gateway = "开" if ctx.config.gateway.enabled else "关"
+        return (
+            f"等级 {ctx.config.crawler.stealth_level} {policy.name} · "
+            f"跳数 {ctx.config.chain.hops} ({ctx.config.chain.mode}) · "
+            f"候选 {ctx.candidate_pool.count()} · 可用 {ctx.verified_pool.count()} · "
+            f"网关 {gateway}"
+        )
+    except Exception:  # status must never break the menu
+        return ""
+
+
 async def run_menu(ctx: AppContext, ui: UI, menu: Any = MAIN) -> None:
     """Nested numeric navigation. ``0`` goes back one level (or exits at MAIN)."""
     stack: list[Any] = [menu]
+    ui.banner(__version__)
     while stack:
         current = stack[-1]
-        ui.menu(current)
+        status = _status_line(ctx) if current is MAIN else None
+        ui.menu(current, status=status)
         choice = await _ask(ui, "请输入数字")
         item = current.find(choice)
         if item is None:
-            ui.print("无效选择，请重新输入")
+            ui.error("无效选择，请重新输入")
             continue
         if item.key == "0":
             stack.pop()
@@ -565,17 +617,16 @@ async def run_menu(ctx: AppContext, ui: UI, menu: Any = MAIN) -> None:
             return
         handler = ACTIONS.get(item.action)
         if handler is None:
-            ui.print(f"未实现的操作：{item.action}")
+            ui.error(f"未实现的操作：{item.action}")
             continue
         try:
             await handler(ctx, ui)
         except KeyboardInterrupt:
-            ui.print("操作已中断")
+            ui.warn("操作已中断")
         except Exception as exc:
             log.exception("menu action %s failed", item.action)
-            ui.print(f"操作失败：{type(exc).__name__}: {exc}")
-        if not ui.plain:
-            await _ask(ui, "按回车继续")
+            ui.error(f"操作失败：{type(exc).__name__}: {exc}")
+        ui.pause()
 
 
 # --- non-interactive ---------------------------------------------------
@@ -681,7 +732,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             ctx = AppContext(args.config, base_dir=args.base_dir)
             try:
                 await ctx.startup()
-                ui.print(f"anonchains {__version__} | 合规提示：主菜单 8 -> 5")
                 await run_menu(ctx, ui)
                 return 0
             finally:

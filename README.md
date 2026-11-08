@@ -77,7 +77,7 @@ python -m pytest tests -q       # 离线单元测试
 
 ## 依赖
 
-运行依赖锁定在 `requirements.txt`：`aiohttp`、`cryptography`、`PyYAML`、`rich`。可选增强在 `requirements-optional.txt`：`argon2-cffi`（Argon2id）、`curl_cffi`（TLS 指纹）、`pytest` / `pytest-asyncio`。sing-box / xray 二进制由用户自备，仅用于 Python 无法原生实现的协议，缺失时优雅降级并给出安装指引。
+运行依赖锁定在 `requirements.txt`：`aiohttp`、`cryptography`、`PyYAML`。CLI 渲染层零依赖（内置 CJK 对齐表格与 ANSI 颜色）。可选增强在 `requirements-optional.txt`：`argon2-cffi`（Argon2id）、`curl_cffi`（TLS 指纹）、`pytest` / `pytest-asyncio`。sing-box / xray 二进制由用户自备，仅用于 Python 无法原生实现的协议，缺失时优雅降级并给出安装指引。
 
 ## 许可
 

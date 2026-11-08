@@ -134,7 +134,7 @@ check_python_version() {
 
 probe_dependencies() {
     "$1" - <<'PY'
-core = ("aiohttp", "cryptography", "yaml", "rich")
+core = ("aiohttp", "cryptography", "yaml")
 optional = ("argon2.low_level", "curl_cffi", "pytest")
 def missing(names):
     out = []

@@ -14,7 +14,7 @@ python -m anonchains --config <path> --base-dir <dir> status
 
 全局参数：`--config` 指定主配置文件（默认 `config/anonchains.conf`），`--base-dir` 指定运行时数据根目录（默认项目根目录）。二者常用于隔离测试与多实例。
 
-`UI` 在 TTY 且安装 `rich` 时渲染表格，否则自动降级为纯文本；输入通过标准 `input()`，`EOF` 视为 `0`（返回/退出）。非 TTY 下不额外消耗「按回车继续」输入。
+`UI` 为零依赖自绘渲染：ANSI 颜色（Windows 10+ 控制台自动启用，`NO_COLOR` 关闭）、CJK 全角宽度感知的对齐表格——列宽按终端宽度收缩并截断（省略号），**从不折行**，在 cmd.exe / Windows Terminal / 任意 CJK 字体下均保持版面完整。主菜单标题下常驻一行状态摘要（隐匿等级、跳数、双池计数、网关开关）。输入通过标准 `input()`，`EOF` 视为 `0`（返回/退出）。
 
 退出码：`0` 成功；`2` 配置错误 / 未知源 / argparse 参数错误；`130` Ctrl+C 中断。
 
@@ -91,6 +91,7 @@ python -m anonchains --config <path> --base-dir <dir> status
 | `7` | 启动外部核心（特殊协议） | 缺失二进制时给出安装指引 |
 | `8` | 停止外部核心 | |
 | `9` | 导出核心配置（dry-run） | 含凭证，勿外传 |
+| `10` | 安装外部核心（自动下载 sing-box） | 落盘 `vendor/sing-box/`，成功后自动写 `core.sing_box_path` 并热更新 |
 | `0` | 返回主菜单 | |
 
 ### `5` 本地网关与 API

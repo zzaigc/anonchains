@@ -1,28 +1,91 @@
-"""Numeric main menu / submenu definitions and terminal rendering."""
+"""Numeric main menu / submenu definitions and terminal rendering.
+
+The renderer is self-contained: ANSI colours (enabled on Windows 10+
+consoles), east-asian-width aware table alignment and truncation-based
+columns. It never wraps table rows, so the layout stays intact in
+cmd.exe / Windows Terminal / any CJK font.
+"""
 
 from __future__ import annotations
 
 import getpass
-import importlib
 import json
 import os
+import shutil
 import sys
+import unicodedata
 from dataclasses import dataclass
 from typing import Any, Sequence
 
 from ..stealth.levels import choices
 
-# Dynamic import keeps rich optional at runtime and avoids "possibly unbound"
-# names in the except branch. When rich is missing the UI renders plain text.
-_console_mod: Any = None
-_table_mod: Any = None
-try:
-    _console_mod = importlib.import_module("rich.console")
-    _table_mod = importlib.import_module("rich.table")
-except ImportError:  # pragma: no cover - dependency is in requirements.txt
-    _console_mod = None
-    _table_mod = None
-_has_rich: bool = _console_mod is not None and _table_mod is not None
+if sys.platform == "win32":
+    os.system("")  # enable ANSI escape sequences on Windows 10+ consoles
+
+_COLOR = sys.stdout.isatty() and os.environ.get("NO_COLOR") is None
+
+
+def color(text: str, code: str) -> str:
+    if not _COLOR:
+        return text
+    return f"\033[{code}m{text}\033[0m"
+
+
+def bold(text: str) -> str:
+    return color(text, "1")
+
+
+def cyan(text: str) -> str:
+    return color(text, "36")
+
+
+def green(text: str) -> str:
+    return color(text, "32")
+
+
+def yellow(text: str) -> str:
+    return color(text, "33")
+
+
+def red(text: str) -> str:
+    return color(text, "31")
+
+
+def dim(text: str) -> str:
+    return color(text, "2")
+
+
+def _width(text: str) -> int:
+    """Display width: CJK fullwidth glyphs count as 2 columns."""
+    return sum(2 if unicodedata.east_asian_width(ch) in {"W", "F"} else 1 for ch in text)
+
+
+def _truncate(text: str, width: int) -> str:
+    """Cut ``text`` to at most ``width`` display columns, ellipsis on cut."""
+    if _width(text) <= width:
+        return text
+    out: list[str] = []
+    used = 0
+    for ch in text:
+        w = 2 if unicodedata.east_asian_width(ch) in {"W", "F"} else 1
+        if used + w > width - 1:
+            break
+        out.append(ch)
+        used += w
+    return "".join(out) + "…"
+
+
+def _pad(text: str, width: int) -> str:
+    return text + " " * max(0, width - _width(text))
+
+
+def _fit_widths(widths: list[int], budget: int, minimum: int = 8) -> list[int]:
+    """Shrink the widest columns until the total fits ``budget``."""
+    fitted = list(widths)
+    while sum(fitted) > budget and max(fitted) > minimum:
+        largest = max(range(len(fitted)), key=lambda i: fitted[i])
+        fitted[largest] = max(minimum, fitted[largest] - max(1, (sum(fitted) - budget) // len(fitted)))
+    return fitted
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,6 +165,7 @@ _CHAIN = Menu(
         MenuItem("7", "启动外部核心（特殊协议）", "chain-core-start"),
         MenuItem("8", "停止外部核心", "chain-core-stop"),
         MenuItem("9", "导出核心配置（dry-run）", "chain-core-export"),
+        MenuItem("10", "安装外部核心（自动下载 sing-box）", "chain-core-install"),
         MenuItem("0", "返回主菜单", "back"),
     ),
 )
@@ -167,47 +231,95 @@ SUBMENUS: dict[str, Menu] = {
 
 
 class UI:
-    """Small rendering facade: rich when attached to a TTY, plain text otherwise."""
+    """ANSI renderer: CJK-safe aligned tables, menus, prompts and progress."""
 
     def __init__(self, *, force_plain: bool = False) -> None:
-        self.plain = force_plain or not _has_rich or not sys.stdout.isatty()
-        self.console = _console_mod.Console() if _has_rich and not self.plain else None
+        self.plain = force_plain or not _COLOR
+
+    # --- primitives -----------------------------------------------------
+
+    def _c(self, fn, text: str) -> str:
+        return text if self.plain else fn(text)
 
     def print(self, message: Any = "") -> None:
-        if self.console is not None:
-            self.console.print(message)
-        else:
-            print(message, flush=True)
+        print(message, flush=True)
 
-    def menu(self, menu: Menu) -> None:
-        if self.console is None:
-            self.print(f"\n== {menu.title} ==")
-            for item in menu.items:
-                self.print(f"  {item.key}. {item.label}")
-            return
-        table = _table_mod.Table(title=menu.title, show_header=True, header_style="bold cyan")
-        table.add_column("序号", width=6)
-        table.add_column("功能")
+    def error(self, message: str) -> None:
+        self.print(self._c(red, message))
+
+    def success(self, message: str) -> None:
+        self.print(self._c(green, message))
+
+    def warn(self, message: str) -> None:
+        self.print(self._c(yellow, message))
+
+    # --- layout ---------------------------------------------------------
+
+    def banner(self, version: str | None = None) -> None:
+        width = min(72, shutil.get_terminal_size((100, 24)).columns - 2)
+        title = "  anonchains · 模块化高匿多跳代理链编排工具"
+        if version:
+            title += f"  v{version}"
+        self.print()
+        self.print(self._c(cyan, "═" * width))
+        self.print(self._c(cyan, title))
+        self.print(self._c(dim, "  仅限授权环境使用 · 使用前必读 docs/16-legal-use-and-disclaimer.md"))
+        self.print(self._c(cyan, "═" * width))
+
+    def menu(self, menu: Menu, *, status: str | None = None) -> None:
+        width = min(72, shutil.get_terminal_size((100, 24)).columns - 2)
+        self.print()
+        self.print(f" {self._c(bold, menu.title)}")
+        if status:
+            self.print(f" {self._c(dim, status)}")
+        rule = self._c(dim, "─" * width)
+        self.print(f" {rule}")
         for item in menu.items:
-            table.add_row(item.key, item.label)
-        self.console.print(table)
+            key = self._c(cyan, f"{item.key:>2}")
+            label = self._c(dim, item.label) if item.key == "0" else item.label
+            self.print(f"   {key}. {label}")
+        self.print()
 
     def table(self, title: str, columns: Sequence[str], rows: Sequence[Sequence[Any]]) -> None:
+        """CJK-aware aligned table; cells are truncated, never wrapped."""
         if not rows:
             self.print(f"{title}: (空)")
             return
-        if self.console is None:
-            self.print(f"\n== {title} ==")
-            self.print(" | ".join(columns))
-            for row in rows:
-                self.print(" | ".join(str(cell) for cell in row))
-            return
-        table = _table_mod.Table(title=title, show_header=True, header_style="bold cyan")
-        for column in columns:
-            table.add_column(column)
+        width = shutil.get_terminal_size((100, 24)).columns
+        header = [str(c) for c in columns]
+        body: list[list[str]] = []
         for row in rows:
-            table.add_row(*[str(cell) for cell in row])
-        self.console.print(table)
+            cells = [" ".join(str(v).splitlines()) or "-" for v in row]
+            body.append(cells)
+        n = len(header)
+        widths = [_width(h) for h in header]
+        for cells in body:
+            for i in range(min(n, len(cells))):
+                widths[i] = max(widths[i], _width(cells[i]))
+        budget = max(20, width - 2 - 2 * (n - 1))
+        if n > 1 and _width(header[0]) <= 4:  # index-like column (# / 序号 / 跳)
+            widths[0] = min(widths[0], 8)
+        widths = _fit_widths(widths, budget)
+        lines = ["  ".join(_pad(_truncate(h, widths[i]), widths[i]) for i, h in enumerate(header))]
+        lines.append("  ".join("-" * widths[i] for i in range(n)))
+        for cells in body:
+            lines.append(
+                "  ".join(
+                    _pad(_truncate(cells[i], widths[i]) if i < len(cells) else "-", widths[i])
+                    for i in range(n)
+                )
+            )
+        self.print()
+        self.print(self._c(bold, title))
+        self.print(self._c(dim, " " + lines[0]))
+        self.print(self._c(dim, " " + lines[1]))
+        for line in lines[2:]:
+            self.print(" " + line)
+
+    def json(self, data: Any) -> None:
+        self.print(json.dumps(data, indent=2, ensure_ascii=False, default=str))
+
+    # --- progress -------------------------------------------------------
 
     def progress(self, done: int, total: int, label: str = "") -> str:
         """Inline percentage bar for long-running batches.
@@ -223,25 +335,19 @@ class UI:
         bar = "█" * filled + "░" * (width - filled)
         percent = int(100 * done / total)
         text = f"[{bar}] {percent:3d}% {done}/{total} {label}".rstrip()
-        if self.console is not None:
-            self.console.print(text.ljust(100), end="\r", highlight=False, markup=False)
-        else:
-            print("\r" + text.ljust(100), end="", flush=True)
+        print("\r" + text.ljust(100), end="", flush=True)
         return text
 
     def progress_end(self) -> None:
         """Finish an inline progress line (call even when a batch fails)."""
-        if self.console is not None:
-            self.console.print()
-        else:
-            print(flush=True)
+        print(flush=True)
 
-    def json(self, data: Any) -> None:
-        self.print(json.dumps(data, indent=2, ensure_ascii=False, default=str))
+    # --- input ----------------------------------------------------------
 
     def ask(self, prompt: str = "请选择") -> str:
+        arrow = self._c(dim, "›")
         try:
-            return input(f"{prompt} > ").strip()
+            return input(f"{prompt} {arrow} ").strip()
         except EOFError:
             return "0"
 
@@ -251,3 +357,9 @@ class UI:
         if preset:
             return preset
         return getpass.getpass(f"{prompt} > ")
+
+    def pause(self, prompt: str = "按回车继续") -> None:
+        try:
+            input(self._c(dim, f"\n{prompt}... "))
+        except (EOFError, KeyboardInterrupt):
+            print()

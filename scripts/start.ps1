@@ -156,7 +156,7 @@ function Assert-PythonVersion($python) {
 # Only single quotes inside the Python snippets: PowerShell 5.1 strips double
 # quotes when passing a multi-line string to a native executable.
 $Probe = @'
-core = ('aiohttp', 'cryptography', 'yaml', 'rich')
+core = ('aiohttp', 'cryptography', 'yaml')
 optional = ('argon2.low_level', 'curl_cffi', 'pytest')
 def missing(names):
     out = []

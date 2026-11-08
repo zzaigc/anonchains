@@ -13,7 +13,6 @@ dependencies = [
     "aiohttp>=3.10,<4",
     "cryptography>=42,<60",
     "PyYAML>=6,<7",
-    "rich>=13,<16",
 ]
 
 [project.optional-dependencies]

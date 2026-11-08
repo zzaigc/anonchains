@@ -7,7 +7,7 @@
 | Python | `>= 3.10`；开发与实测环境 CPython 3.14.7（Windows） |
 | 操作系统 | Windows / Linux / macOS；不依赖 `LD_PRELOAD`、iptables 或 Linux 专有调用 |
 | 网络 | 仅抓取、校验、源发现需要联网；菜单、状态、配置、Vault、测试全部可离线运行 |
-| 外部核心 | 可选：sing-box / xray 二进制，用户自备并置于 PATH 或配置绝对路径 |
+| 外部核心 | 可选：sing-box 可自动安装（`python scripts/install_singbox.py` 或 CLI 菜单 `4 -> 10`，落盘 `vendor/sing-box/`，镜像回退 + 断点续传）；xray 用户自备并置于 PATH 或配置绝对路径 |
 | 磁盘 | `pools/` 与 `logs/` 需可写；SQLite 使用 WAL 模式 |
 
 ## 2. 安装
@@ -72,7 +72,6 @@ python -m pip install -e ".[enhanced,dev]"
 | `aiohttp` | `3.14.3` | 抓取、echo 校验、REST 网关 | 必需 |
 | `cryptography` | `50.0.1` | AES-256-GCM / ChaCha20-Poly1305 | Vault 变为 `unavailable`，敏感字段不落盘 |
 | `PyYAML` | `6.0.3` | 源清单、Clash YAML 解析 | 必需 |
-| `rich` | `15.0.0` | 表格化 CLI | 自动降级纯文本 |
 | `argon2-cffi` | `>=23.1.0,<27` | Argon2id KDF | 降级 `hashlib.scrypt` |
 | `curl_cffi` | `>=0.11.0,<1` | 等级 4 TLS 指纹伪装 | 静默降级标准 aiohttp TLS |
 | `pytest` / `pytest-asyncio` | `9.2.0` / `>=1.0,<2` | 离线单测 | 仅影响测试 |

@@ -12,6 +12,9 @@
 | `install.bat` / `install.ps1` / `install.sh` | 三平台 | 只检测并安装依赖，不启动 |
 | `check.bat` / `check.ps1` / `check.sh` | 三平台 | 只检测环境，**不创建文件、不安装** |
 | `test.bat` / `test.ps1` / `test.sh` | 三平台 | 运行离线 `pytest` 套件（缺 pytest 时安装可选依赖） |
+| `install_singbox.py` | 三平台（Python 直跑） | 自动下载 sing-box 到 `vendor/sing-box/<platform>-<arch>/`：GitHub API 解析最新版 → gh-proxy 镜像回退 → 断点续传 → 压缩包完整性校验；纯标准库实现 |
+
+安装外部核心的两种方式：`python scripts/install_singbox.py`，或在 CLI 主菜单 `4 链路与转发 -> 10 安装外部核心`；安装成功后若 `core.sing_box_path` 仍找不到二进制，CLI 会自动把 vendor 路径写入配置并热更新。`vendor/` 已加入 `.gitignore`，安装产物不会进入版本库。Xray-core 请从 releases 页面手动下载后配置 `core.xray_path`。
 
 `.bat` 与 `*.ps1` 的薄封装都转调 `start.ps1`；`*.sh` 薄封装转调 `start.sh`。新增能力请改主脚本，薄封装保持一行转发。
 
@@ -21,7 +24,7 @@
 
 1. 定位项目根目录（脚本所在目录的上一级），切换到该目录；
 2. 解析 Python 解释器（见第 4 节），校验版本 `>= 3.10`；
-3. 探测依赖：核心 `aiohttp` / `cryptography` / `yaml` / `rich`，可选 `argon2.low_level` / `curl_cffi` / `pytest`；
+3. 探测依赖：核心 `aiohttp` / `cryptography` / `yaml`，可选 `argon2.low_level` / `curl_cffi` / `pytest`；
 4. 核心依赖缺失时执行 `pip install -r requirements.txt`；`--enhanced` 时追加 `requirements-optional.txt`；
 5. 按模式启动 CLI / 运行测试 / 仅报告 / 装完即退出。
 
