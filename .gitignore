@@ -12,6 +12,10 @@ pools/.vault.tmp
 *.key
 .vault_token
 pools/.gateway_token
+pools/.etags.json
+
+# Vendored external cores downloaded by scripts/install_singbox.py
+vendor/
 config/*.local.conf
 config/sources.local.yaml
 config/*.local.yaml

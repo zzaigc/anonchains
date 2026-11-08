@@ -20,8 +20,9 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 INSTALL_HINT = (
-    "Install sing-box (https://github.com/SagerNet/sing-box/releases) or "
-    "Xray-core (https://github.com/XTLS/Xray-core/releases), then set "
+    "Run `python scripts/install_singbox.py` (or CLI menu 4 -> 10) to install "
+    "sing-box into vendor/sing-box automatically; for Xray-core download from "
+    "https://github.com/XTLS/Xray-core/releases, then set "
     "core.sing_box_path / core.xray_path in config/anonchains.conf."
 )
 
