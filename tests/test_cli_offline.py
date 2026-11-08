@@ -63,14 +63,16 @@ def test_gateway_switch_offline(isolated):
 
 
 def test_interactive_menu_exit_path(isolated, monkeypatch, capsys):
-    # 8 -> system submenu, 1 -> status action, "" -> pause, 0 -> back, 0 -> exit
-    inputs = iter(["8", "1", "", "0", "0"])
+    # 8 -> system submenu, 1 -> status action, "" -> pause, 0 -> back,
+    # 0 -> exit prompt, "n" -> cancel (menu re-shown), 0 -> prompt, "" -> confirm
+    inputs = iter(["8", "1", "", "0", "0", "n", "0", ""])
     monkeypatch.setattr("builtins.input", lambda _: next(inputs))
     assert main(args_for(isolated)) == 0
     output = capsys.readouterr().out
-    assert "anonchains 主菜单" in output
     assert "系统配置与状态" in output
     assert "等级 2 Balanced" in output  # sticky status line under the main menu
+    # exit confirmation: main menu rendered once initially + twice after cancel
+    assert output.count("anonchains 主菜单") == 3
 
 
 def test_parser_has_expected_commands():

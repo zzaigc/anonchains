@@ -414,11 +414,16 @@ def _stealth_handler(level: int) -> Handler:
 
 async def a_stealth_show(ctx: AppContext, ui: UI) -> None:
     current = ctx.config.crawler.stealth_level
+    level_choices = choices()
+    highlight = next(
+        (i for i, (level, _, _) in enumerate(level_choices) if level == current), None
+    )
     ui.table("隐匿等级", ("序号", "名称", "当前", "并发上限", "抖动(ms)", "说明"),
-             [(level, name, "<==" if level == current else "",
+             [(level, name, "← 当前" if level == current else "",
                get_policy(level).concurrency_cap,
                f"{get_policy(level).min_delay_ms}~{get_policy(level).max_delay_ms}", description)
-              for level, name, description in choices()])
+              for level, name, description in level_choices],
+             highlight=highlight)
 
 
 # --- vault -------------------------------------------------------------
@@ -606,6 +611,10 @@ async def run_menu(ctx: AppContext, ui: UI, menu: Any = MAIN) -> None:
         if item is None:
             ui.error("无效选择，请重新输入")
             continue
+        if item.action == "exit":
+            if await asyncio.to_thread(ui.confirm, "确认退出 anonchains?", True):
+                return
+            continue
         if item.key == "0":
             stack.pop()
             continue
@@ -613,8 +622,6 @@ async def run_menu(ctx: AppContext, ui: UI, menu: Any = MAIN) -> None:
         if submenu is not None:
             stack.append(submenu)
             continue
-        if item.action == "exit":
-            return
         handler = ACTIONS.get(item.action)
         if handler is None:
             ui.error(f"未实现的操作：{item.action}")

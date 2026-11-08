@@ -253,6 +253,18 @@ class UI:
     def warn(self, message: str) -> None:
         self.print(self._c(yellow, message))
 
+    def confirm(self, prompt: str, default: bool = True) -> bool:
+        """Y/n confirmation; Enter picks the default, EOF picks the default."""
+        arrow = self._c(dim, "›")
+        suffix = "[Y/n]" if default else "[y/N]"
+        try:
+            answer = input(f"{prompt} {suffix} {arrow} ").strip().lower()
+        except EOFError:
+            return default
+        if not answer:
+            return default
+        return answer in {"y", "yes"}
+
     # --- layout ---------------------------------------------------------
 
     def banner(self, version: str | None = None) -> None:
@@ -280,8 +292,19 @@ class UI:
             self.print(f"   {key}. {label}")
         self.print()
 
-    def table(self, title: str, columns: Sequence[str], rows: Sequence[Sequence[Any]]) -> None:
-        """CJK-aware aligned table; cells are truncated, never wrapped."""
+    def table(
+        self,
+        title: str,
+        columns: Sequence[str],
+        rows: Sequence[Sequence[Any]],
+        *,
+        highlight: int | None = None,
+    ) -> None:
+        """CJK-aware aligned table; cells are truncated, never wrapped.
+
+        ``highlight`` colors the given row index green (e.g. the current
+        stealth level).
+        """
         if not rows:
             self.print(f"{title}: (空)")
             return
@@ -313,8 +336,11 @@ class UI:
         self.print(self._c(bold, title))
         self.print(self._c(dim, " " + lines[0]))
         self.print(self._c(dim, " " + lines[1]))
-        for line in lines[2:]:
-            self.print(" " + line)
+        for index, line in enumerate(lines[2:]):
+            if index == highlight:
+                self.print(self._c(green, " " + line))
+            else:
+                self.print(" " + line)
 
     def json(self, data: Any) -> None:
         self.print(json.dumps(data, indent=2, ensure_ascii=False, default=str))
