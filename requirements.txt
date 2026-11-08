@@ -1,0 +1,6 @@
+# anonchains runtime dependencies
+# Versions verified against CPython 3.14.7 on Windows; all have official wheels.
+aiohttp==3.14.3
+cryptography==50.0.1
+PyYAML==6.0.3
+rich==15.0.0

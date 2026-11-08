@@ -1,0 +1,236 @@
+# anonchains built-in source registry
+#
+# Only PUBLIC, free, no-auth proxy lists are listed here. Every source is
+# fetched with rate limiting and robots.txt respect (see crawler.respect_robots).
+# Sources with very large payloads are present but disabled by default: enable
+# them from the CLI "source management" submenu when you have the bandwidth.
+#
+# Add your own sources in config/sources.local.yaml using the same schema;
+# entries there override built-ins with the same `name`.
+#
+# kind: plain | json | yaml | subscription | api
+#   subscription = base64 bundle or vless://vmess://ss://... share links
+
+version: 1
+
+sources:
+  # ---- gfpcom/free-proxy-list (hourly, covers every modern protocol) -------
+  - name: gfpcom-vless
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/vless.txt
+    kind: subscription
+    protocol_hint: vless
+    enabled: true
+    weight: 3
+    note: VLESS share links, hourly refreshed
+  - name: gfpcom-vmess
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/vmess.txt
+    kind: subscription
+    protocol_hint: vmess
+    enabled: true
+    weight: 3
+  - name: gfpcom-trojan
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/trojan.txt
+    kind: subscription
+    protocol_hint: trojan
+    enabled: true
+    weight: 3
+  - name: gfpcom-ss
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/ss.txt
+    kind: subscription
+    protocol_hint: ss
+    enabled: true
+    weight: 3
+  - name: gfpcom-ssr
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/ssr.txt
+    kind: subscription
+    protocol_hint: ssr
+    enabled: true
+    weight: 2
+  - name: gfpcom-hy2
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/hy2.txt
+    kind: subscription
+    protocol_hint: hysteria2
+    enabled: true
+    weight: 3
+  - name: gfpcom-hy
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/hy.txt
+    kind: subscription
+    protocol_hint: hysteria2
+    enabled: true
+    weight: 1
+  - name: gfpcom-tuic
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/tuic.txt
+    kind: subscription
+    protocol_hint: tuic
+    enabled: true
+    weight: 3
+  - name: gfpcom-wireguard
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/wireguard.txt
+    kind: subscription
+    protocol_hint: wireguard
+    enabled: true
+    weight: 3
+  - name: gfpcom-anytls
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/anytls.txt
+    kind: subscription
+    protocol_hint: anytls
+    enabled: true
+    weight: 2
+  - name: gfpcom-socks
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/socks.txt
+    kind: plain
+    protocol_hint: socks5
+    enabled: true
+    weight: 2
+  - name: gfpcom-less
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/less.txt
+    kind: subscription
+    enabled: true
+    weight: 1
+  - name: gfpcom-http
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/http.txt
+    kind: plain
+    protocol_hint: http
+    enabled: false
+    weight: 1
+    note: ~550k lines, very large payload; disabled by default
+  - name: gfpcom-https
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/https.txt
+    kind: plain
+    protocol_hint: https
+    enabled: false
+    weight: 1
+    note: ~500k lines, very large payload; disabled by default
+  - name: gfpcom-socks4
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/socks4.txt
+    kind: plain
+    protocol_hint: socks4
+    enabled: false
+    weight: 1
+    note: ~480k lines, very large payload; disabled by default
+  - name: gfpcom-socks5
+    url: https://raw.githubusercontent.com/wiki/gfpcom/free-proxy-list/lists/socks5.txt
+    kind: plain
+    protocol_hint: socks5
+    enabled: false
+    weight: 1
+    note: ~500k lines, very large payload; disabled by default
+
+  # ---- Classic raw lists ---------------------------------------------------
+  - name: thespeedx-http
+    url: https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/http.txt
+    kind: plain
+    protocol_hint: http
+    enabled: true
+    weight: 2
+  - name: thespeedx-socks4
+    url: https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks4.txt
+    kind: plain
+    protocol_hint: socks4
+    enabled: true
+    weight: 2
+  - name: thespeedx-socks5
+    url: https://raw.githubusercontent.com/TheSpeedX/PROXY-List/master/socks5.txt
+    kind: plain
+    protocol_hint: socks5
+    enabled: true
+    weight: 2
+  - name: roosterkid-https
+    url: https://raw.githubusercontent.com/roosterkid/openproxylist/main/HTTPS_RAW.txt
+    kind: plain
+    protocol_hint: https
+    enabled: true
+    weight: 2
+  - name: zaeem20-http
+    url: https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/http.txt
+    kind: plain
+    protocol_hint: http
+    enabled: true
+    weight: 1
+  - name: zaeem20-https
+    url: https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/https.txt
+    kind: plain
+    protocol_hint: https
+    enabled: true
+    weight: 1
+  - name: zaeem20-socks4
+    url: https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/socks4.txt
+    kind: plain
+    protocol_hint: socks4
+    enabled: true
+    weight: 1
+  - name: zaeem20-socks5
+    url: https://raw.githubusercontent.com/Zaeem20/FREE_PROXIES_LIST/master/socks5.txt
+    kind: plain
+    protocol_hint: socks5
+    enabled: true
+    weight: 1
+
+  # ---- Metadata-rich JSON / API --------------------------------------------
+  - name: monosans-json
+    url: https://raw.githubusercontent.com/monosans/proxy-list/main/proxies.json
+    kind: json
+    enabled: true
+    weight: 3
+    note: hourly re-checked, includes latency / exit IP / ASN / geolocation
+  - name: proxyscrape-http
+    url: https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&protocol=http&proxy_format=protocolipport&format=text
+    kind: plain
+    protocol_hint: http
+    enabled: true
+    weight: 2
+  - name: proxyscrape-socks5
+    url: https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&protocol=socks5&proxy_format=protocolipport&format=json
+    kind: json
+    protocol_hint: socks5
+    enabled: true
+    weight: 2
+  - name: geonode-api
+    url: https://proxylist.geonode.com/api/proxy-list?limit=500&page=1&sort_by=lastChecked&sort_type=desc
+    kind: json
+    enabled: true
+    weight: 2
+    note: includes anonymityLevel, upTime and country
+  - name: openproxylist-v2ray
+    url: https://raw.githubusercontent.com/roosterkid/openproxylist/main/V2RAY_RAW.txt
+    kind: subscription
+    enabled: false
+    weight: 1
+    note: optional V2Ray subscription bundle; verify availability before enabling
+
+  # ---- Custom source example (copy into sources.local.yaml) ----------------
+  # - name: my-clash-subscription
+  #   url: https://example.com/clash.yaml
+  #   kind: yaml
+  #   enabled: true
+  #   weight: 5
+  #   headers:
+  #     User-Agent: my-client/1.0
+
+discovery:
+  # Repository-based source discovery is opt-in (crawler.discovery_enabled).
+  # Unauthenticated GitHub API is limited to 60 requests/hour; keep this small.
+  enabled: false
+  max_results: 20
+  search_queries:
+    - free proxy list txt in:name,description
+    - vmess vless subscription in:name,description
+  github_repositories:
+    - gfpcom/free-proxy-list
+    - proxmint/free-proxy-list
+    - monosans/proxy-list
+    - Zaeem20/FREE_PROXIES_LIST
+  raw_candidate_paths:
+    - http.txt
+    - https.txt
+    - socks4.txt
+    - socks5.txt
+    - proxies.json
+    - all.txt
+    - data.json
+  file_extensions:
+    - .txt
+    - .json
+    - .yaml
+    - .yml
+    - .list

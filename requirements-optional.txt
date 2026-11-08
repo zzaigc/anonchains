@@ -1,0 +1,14 @@
+# Optional / development dependencies. Install with:
+#   python -m pip install -r requirements-optional.txt
+#
+# Preferred KDF. Without it anonchains falls back to hashlib.scrypt (also a
+# memory-hard KDF) and records the KDF name in the vault header.
+argon2-cffi>=23.1.0,<27
+
+# TLS fingerprint impersonation for stealth level 4. Silently degrades to the
+# standard aiohttp TLS stack when absent.
+curl_cffi>=0.11.0,<1
+
+# Test tooling. Tests use asyncio.run internally so pytest-asyncio is optional.
+pytest==9.2.0
+pytest-asyncio>=1.0,<2

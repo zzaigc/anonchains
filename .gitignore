@@ -1,0 +1,41 @@
+# Runtime pools contain scraped node data and must never be committed.
+pools/candidate/*.db
+pools/candidate/*.db-*
+pools/verified/*.db
+pools/verified/*.db-*
+pools/**/*.jsonl
+
+# Vault material and secrets.
+*.vault
+pools/.vault
+pools/.vault.tmp
+*.key
+.vault_token
+pools/.gateway_token
+config/*.local.conf
+config/sources.local.yaml
+config/*.local.yaml
+
+# Local IDE / agent data and publish staging: never commit.
+.codebuddy/
+.publish/
+
+# Logs and caches.
+logs/
+*.log
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environments / builds.
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+.idea/
+.vscode/

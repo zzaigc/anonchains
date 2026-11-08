@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "anonchains"
+version = "0.1.0"
+description = "Modular, configurable multi-hop proxy chain orchestrator with dual proxy pools"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "aiohttp>=3.10,<4",
+    "cryptography>=42,<60",
+    "PyYAML>=6,<7",
+    "rich>=13,<16",
+]
+
+[project.optional-dependencies]
+enhanced = ["argon2-cffi>=23.1.0,<27", "curl_cffi>=0.11.0,<1"]
+dev = ["pytest>=8,<10", "pytest-asyncio>=1.0,<2"]
+
+[project.scripts]
+anonchains = "anonchains.cli.commands:main"
+
+[tool.setuptools.packages.find]
+include = ["anonchains*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
