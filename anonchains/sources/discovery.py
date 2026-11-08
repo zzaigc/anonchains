@@ -35,13 +35,15 @@ class CandidateSource:
     repository: str = ""
 
     def to_spec(self, enabled: bool = False) -> SourceSpec:
-        return SourceSpec(
-            name=self.name,
-            url=self.url,
-            kind=self.kind,
-            enabled=enabled,
-            weight=1,
-            note=f"discovered: {self.reason}",
+        return SourceSpec.from_dict(
+            {
+                "name": self.name,
+                "url": self.url,
+                "kind": self.kind,
+                "enabled": enabled,
+                "weight": 1,
+                "note": f"discovered: {self.reason}",
+            }
         )
 
 
